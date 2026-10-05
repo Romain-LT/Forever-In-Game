@@ -1,11 +1,10 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import discord
 from discord.ext import commands
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 intents = discord.Intents.default()
 intents.members = True
@@ -45,8 +44,9 @@ def get_wow_players(guild: discord.Guild) -> list[str]:
 
 def build_wow_embed(guild: discord.Guild) -> discord.Embed:
     players = get_wow_players(guild)
-    now = datetime.now()
 
+    paris = ZoneInfo("Europe/Paris")
+    now = datetime.now(paris)
     last_update = now.strftime("%d/%m/%Y à %H:%M")
 
     if players:
@@ -56,7 +56,8 @@ def build_wow_embed(guild: discord.Guild) -> discord.Embed:
     else:
         description = (
             "Aucun membre n'est actuellement détecté sur World of Warcraft.\n\n"
-            "Les membres doivent partager leur activité Discord pour apparaître ici."
+            "Les membres doivent partager leur activité Discord "
+            "pour apparaître ici."
         )
         color = discord.Color.orange()
         title = "🟠 Joueurs WoW en ligne — 0"
@@ -73,19 +74,23 @@ def build_wow_embed(guild: discord.Guild) -> discord.Embed:
         inline=False
     )
 
-    embed.set_footer(text="Clique sur 🔄 Actualiser pour mettre à jour la liste.")
+    embed.set_footer(
+        text="Clique sur 🔄 Actualiser pour mettre à jour la liste."
+    )
 
     return embed
 
 
 class WowOnlineView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=900)
+        # timeout=None + custom_id = bouton persistant
+        super().__init__(timeout=None)
 
     @discord.ui.button(
         label="Actualiser",
         emoji="🔄",
-        style=discord.ButtonStyle.primary
+        style=discord.ButtonStyle.primary,
+        custom_id="wow_online_refresh"
     )
     async def refresh(
         self,
@@ -99,21 +104,24 @@ class WowOnlineView(discord.ui.View):
             )
             return
 
-        button.disabled = True
-
         await interaction.response.edit_message(
             embed=build_wow_embed(interaction.guild),
             view=self
         )
 
-        button.disabled = False
-
-        await interaction.message.edit(view=self)
-
 
 @bot.event
 async def on_ready():
     print(f"Connecté en tant que {bot.user} ({bot.user.id})")
+
+    # Enregistre la vue persistante.
+    # Cela permet aux anciens boutons de fonctionner après un redémarrage Render.
+    if not getattr(bot, "_wow_view_registered", False):
+        bot.add_view(WowOnlineView())
+        bot._wow_view_registered = True
+
+    for guild in bot.guilds:
+        print(f"Serveur connecté : {guild.name} ({guild.member_count} membres)")
 
 
 @bot.command(name="ig")
@@ -130,18 +138,12 @@ async def in_game(ctx):
     )
 
 
-@in_game.error
-async def in_game_error(ctx, error):
-    print(f"Erreur avec !ig : {error}")
-
-    await ctx.send(
-        "Une erreur s'est produite pendant la recherche des joueurs WoW."
-    )
-
-
 @bot.command(name="release")
 async def release(ctx):
     paris = ZoneInfo("Europe/Paris")
+
+    # Lancement mondial : 4 novembre 2026, 15 h PST.
+    # Pour la France : 5 novembre 2026 à 00:00.
     release_date = datetime(2026, 11, 5, 0, 0, tzinfo=paris)
     now = datetime.now(paris)
 
@@ -150,7 +152,8 @@ async def release(ctx):
     if remaining.total_seconds() <= 0:
         await ctx.send(
             "🎉 **WoW Forever est officiellement disponible !**\n"
-            "La sortie officielle était prévue le 5 novembre 2026 à 00:00, heure de Paris."
+            "La sortie officielle était prévue le 5 novembre 2026 à 00:00 "
+            "(heure de Paris)."
         )
         return
 
@@ -164,7 +167,7 @@ async def release(ctx):
         title="⏳ Sortie officielle de WoW Forever",
         description=(
             f"Il reste **{days} jour(s), {hours} heure(s) et {minutes} minute(s)** "
-            f"avant la sortie officielle."
+            "avant la sortie officielle."
         ),
         color=discord.Color.blue()
     )
@@ -181,13 +184,13 @@ async def release(ctx):
 
     await ctx.send(embed=embed)
 
+
 @bot.command(name="beta")
 async def beta(ctx):
     paris = ZoneInfo("Europe/Paris")
 
-    # Blizzard indique le 21 octobre comme dernier jour complet de test.
-    # L'heure exacte de fermeture n'étant pas officiellement précisée,
-    # le compte à rebours va jusqu'à 23:59 heure de Paris.
+    # Blizzard a annoncé le 21 octobre comme dernier jour complet de test.
+    # L'heure exacte de fermeture n'étant pas publique, on utilise 23:59 Paris.
     beta_end = datetime(2026, 10, 21, 23, 59, tzinfo=paris)
     now = datetime.now(paris)
 
@@ -198,7 +201,7 @@ async def beta(ctx):
             title="🏁 Fin de la bêta WoW Forever",
             description=(
                 "La période de bêta est terminée.\n\n"
-                "La sortie officielle de WoW Forever est prévue "
+                "La sortie officielle de WoW Forever était prévue "
                 "le **5 novembre 2026 à 00:00**, heure de Paris."
             ),
             color=discord.Color.red()
@@ -217,7 +220,7 @@ async def beta(ctx):
         title="🧪 Fin de la bêta WoW Forever",
         description=(
             f"Il reste **{days} jour(s), {hours} heure(s) et {minutes} minute(s)** "
-            f"avant la fin estimée de la bêta."
+            "avant la fin estimée de la bêta."
         ),
         color=discord.Color.purple()
     )
@@ -235,10 +238,20 @@ async def beta(ctx):
     )
 
     embed.set_footer(
-        text="L'heure exacte de fermeture n'a pas été précisée publiquement."
+        text="L'heure précise de fermeture n'a pas été précisée publiquement."
     )
 
     await ctx.send(embed=embed)
+
+
+@in_game.error
+async def in_game_error(ctx, error):
+    print(f"Erreur avec !ig : {error}")
+
+    await ctx.send(
+        "Une erreur s'est produite pendant la recherche des joueurs WoW."
+    )
+
 
 TOKEN = os.environ["DISCORD_TOKEN"]
 bot.run(TOKEN)
