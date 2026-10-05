@@ -1,25 +1,32 @@
 import os
 import discord
 from discord.ext import commands, tasks
-import asyncio
 
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
+intents.message_content = True  # nécessaire uniquement pour !wowonline
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+
 @bot.event
 async def on_ready():
-    print(f"{bot.user} is ready")
-    update_online.start()
+    print(f"Connecté en tant que {bot.user} ({bot.user.id})")
+
+    if not update_online.is_running():
+        update_online.start()
+
 
 @bot.command()
-async def ig(ctx):
-    guild = ctx.guild
+async def wowonline(ctx):
+    if ctx.guild is None:
+        await ctx.send("Cette commande doit être utilisée dans un serveur Discord.")
+        return
+
     wow_players = []
 
-    for member in guild.members:
+    for member in ctx.guild.members:
         if member.bot:
             continue
 
@@ -29,30 +36,27 @@ async def ig(ctx):
 
                 if "world of warcraft" in game_name.lower():
                     wow_players.append(
-                        f"{member.display_name} — {game_name}"
+                        f"• {member.display_name} — {game_name}"
                     )
                     break
 
     if not wow_players:
         await ctx.send(
             "Aucun membre détecté sur World of Warcraft actuellement.\n"
-            "Vérifie que les membres partagent leur activité Discord."
+            "Les joueurs doivent autoriser Discord à afficher leur activité."
         )
         return
 
-    msg = "**Membres jouant à WoW actuellement :**\n" + "\n".join(
-        f"• {player}" for player in wow_players
-    )
-    await ctx.send(msg)
+    message = "**Joueurs WoW détectés actuellement :**\n" + "\n".join(wow_players)
+    await ctx.send(message)
+
 
 @tasks.loop(seconds=60)
 async def update_online():
-    # Optionnel : mettre à jour un message épinglé dans un channel dédié
+    # On ne fait rien pour le moment.
+    # Cette tâche servira si tu veux maintenir un message automatique dans un channel.
     pass
 
-@ig.error
-async def wowonline_error(ctx, error):
-    await ctx.send(f"Erreur: {error}")
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.environ["DISCORD_TOKEN"]
 bot.run(TOKEN)
