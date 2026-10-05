@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 import discord
 from discord.ext import commands
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
@@ -135,6 +138,48 @@ async def in_game_error(ctx, error):
         "Une erreur s'est produite pendant la recherche des joueurs WoW."
     )
 
+
+@bot.command(name="release")
+async def release(ctx):
+    paris = ZoneInfo("Europe/Paris")
+    release_date = datetime(2026, 11, 5, 0, 0, tzinfo=paris)
+    now = datetime.now(paris)
+
+    remaining = release_date - now
+
+    if remaining.total_seconds() <= 0:
+        await ctx.send(
+            "🎉 **WoW Forever est officiellement disponible !**\n"
+            "La sortie officielle était prévue le 5 novembre 2026 à 00:00, heure de Paris."
+        )
+        return
+
+    total_seconds = int(remaining.total_seconds())
+
+    days, remainder = divmod(total_seconds, 86_400)
+    hours, remainder = divmod(remainder, 3_600)
+    minutes, _ = divmod(remainder, 60)
+
+    embed = discord.Embed(
+        title="⏳ Sortie officielle de WoW Forever",
+        description=(
+            f"Il reste **{days} jour(s), {hours} heure(s) et {minutes} minute(s)** "
+            f"avant la sortie officielle."
+        ),
+        color=discord.Color.blue()
+    )
+
+    embed.add_field(
+        name="Date de sortie",
+        value="5 novembre 2026 à 00:00 (heure de Paris)",
+        inline=False
+    )
+
+    embed.set_footer(
+        text="Le compte à rebours est calculé au moment de la commande."
+    )
+
+    await ctx.send(embed=embed)
 
 TOKEN = os.environ["DISCORD_TOKEN"]
 bot.run(TOKEN)
