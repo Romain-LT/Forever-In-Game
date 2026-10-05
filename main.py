@@ -181,5 +181,64 @@ async def release(ctx):
 
     await ctx.send(embed=embed)
 
+@bot.command(name="beta")
+async def beta(ctx):
+    paris = ZoneInfo("Europe/Paris")
+
+    # Blizzard indique le 21 octobre comme dernier jour complet de test.
+    # L'heure exacte de fermeture n'étant pas officiellement précisée,
+    # le compte à rebours va jusqu'à 23:59 heure de Paris.
+    beta_end = datetime(2026, 10, 21, 23, 59, tzinfo=paris)
+    now = datetime.now(paris)
+
+    remaining = beta_end - now
+
+    if remaining.total_seconds() <= 0:
+        embed = discord.Embed(
+            title="🏁 Fin de la bêta WoW Forever",
+            description=(
+                "La période de bêta est terminée.\n\n"
+                "La sortie officielle de WoW Forever est prévue "
+                "le **5 novembre 2026 à 00:00**, heure de Paris."
+            ),
+            color=discord.Color.red()
+        )
+
+        await ctx.send(embed=embed)
+        return
+
+    total_seconds = int(remaining.total_seconds())
+
+    days, remainder = divmod(total_seconds, 86_400)
+    hours, remainder = divmod(remainder, 3_600)
+    minutes, _ = divmod(remainder, 60)
+
+    embed = discord.Embed(
+        title="🧪 Fin de la bêta WoW Forever",
+        description=(
+            f"Il reste **{days} jour(s), {hours} heure(s) et {minutes} minute(s)** "
+            f"avant la fin estimée de la bêta."
+        ),
+        color=discord.Color.purple()
+    )
+
+    embed.add_field(
+        name="Fin annoncée par Blizzard",
+        value="21 octobre 2026 — dernier jour complet de test",
+        inline=False
+    )
+
+    embed.add_field(
+        name="Référence du compte à rebours",
+        value="21 octobre 2026 à 23:59 (heure de Paris)",
+        inline=False
+    )
+
+    embed.set_footer(
+        text="L'heure exacte de fermeture n'a pas été précisée publiquement."
+    )
+
+    await ctx.send(embed=embed)
+
 TOKEN = os.environ["DISCORD_TOKEN"]
 bot.run(TOKEN)
