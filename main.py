@@ -1,25 +1,26 @@
 import os
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
-intents.message_content = True  # nécessaire uniquement pour !wowonline
+intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(
+    command_prefix="!",
+    intents=intents,
+    help_command=None
+)
 
 
 @bot.event
 async def on_ready():
     print(f"Connecté en tant que {bot.user} ({bot.user.id})")
 
-    if not update_online.is_running():
-        update_online.start()
 
-
-@bot.command()
-async def wowonline(ctx):
+@bot.command(name="ig")
+async def in_game(ctx):
     if ctx.guild is None:
         await ctx.send("Cette commande doit être utilisée dans un serveur Discord.")
         return
@@ -42,20 +43,16 @@ async def wowonline(ctx):
 
     if not wow_players:
         await ctx.send(
-            "Aucun membre détecté sur World of Warcraft actuellement.\n"
-            "Les joueurs doivent autoriser Discord à afficher leur activité."
+            "Aucun membre n'est actuellement détecté sur World of Warcraft."
         )
         return
 
-    message = "**Joueurs WoW détectés actuellement :**\n" + "\n".join(wow_players)
+    message = (
+        "**Membres actuellement détectés sur WoW :**\n"
+        + "\n".join(wow_players)
+    )
+
     await ctx.send(message)
-
-
-@tasks.loop(seconds=60)
-async def update_online():
-    # On ne fait rien pour le moment.
-    # Cette tâche servira si tu veux maintenir un message automatique dans un channel.
-    pass
 
 
 TOKEN = os.environ["DISCORD_TOKEN"]
