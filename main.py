@@ -42,7 +42,9 @@ def get_wow_players(guild: discord.Guild) -> list[str]:
 
 def build_wow_embed(guild: discord.Guild) -> discord.Embed:
     players = get_wow_players(guild)
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
+
+    last_update = now.strftime("%d/%m/%Y à %H:%M")
 
     if players:
         description = "\n".join(players)
@@ -59,11 +61,17 @@ def build_wow_embed(guild: discord.Guild) -> discord.Embed:
     embed = discord.Embed(
         title=title,
         description=description,
-        color=color,
-        timestamp=now
+        color=color
     )
 
-    embed.set_footer(text="Clique sur Actualiser pour mettre à jour la liste.")
+    embed.add_field(
+        name="Dernière actualisation",
+        value=last_update,
+        inline=False
+    )
+
+    embed.set_footer(text="Clique sur 🔄 Actualiser pour mettre à jour la liste.")
+
     return embed
 
 
