@@ -18,11 +18,16 @@ bot = commands.Bot(
 async def on_ready():
     print(f"Connecté en tant que {bot.user} ({bot.user.id})")
 
+    for guild in bot.guilds:
+        print(f"Serveur connecté : {guild.name} ({guild.member_count} membres)")
+
 
 @bot.command(name="ig")
 async def in_game(ctx):
     if ctx.guild is None:
-        await ctx.send("Cette commande doit être utilisée dans un serveur Discord.")
+        await ctx.send(
+            "Cette commande doit être utilisée dans un serveur Discord."
+        )
         return
 
     wow_players = []
@@ -32,18 +37,23 @@ async def in_game(ctx):
             continue
 
         for activity in member.activities:
-            if isinstance(activity, discord.Game) and activity.name:
-                game_name = activity.name.strip()
+            activity_name = getattr(activity, "name", None)
 
-                if "world of warcraft" in game_name.lower():
-                    wow_players.append(
-                        f"• {member.display_name} — {game_name}"
-                    )
-                    break
+            if not activity_name:
+                continue
+
+            activity_name = activity_name.strip()
+
+            if "world of warcraft" in activity_name.lower():
+                wow_players.append(
+                    f"• {member.display_name} — {activity_name}"
+                )
+                break
 
     if not wow_players:
         await ctx.send(
-            "Aucun membre n'est actuellement détecté sur World of Warcraft."
+            "Aucun membre détecté sur World of Warcraft actuellement.\n"
+            "Vérifie que les membres partagent leur activité Discord."
         )
         return
 
@@ -53,6 +63,15 @@ async def in_game(ctx):
     )
 
     await ctx.send(message)
+
+
+@in_game.error
+async def in_game_error(ctx, error):
+    print(f"Erreur avec !ig : {error}")
+
+    await ctx.send(
+        "Une erreur s'est produite pendant la recherche des joueurs WoW."
+    )
 
 
 TOKEN = os.environ["DISCORD_TOKEN"]
