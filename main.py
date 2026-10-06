@@ -17,17 +17,18 @@ bot = commands.Bot(
     help_command=None
 )
 
-WOW_ROLE_NAME = "Raider"
+WOW_ROLE_ID = 1210417533451108412
 
 def get_wow_players(guild: discord.Guild) -> list[str]:
     players = []
-    
-    role = discord.utils.get(guild.roles, name=WOW_ROLE_NAME)
+
+    role = guild.get_role(WOW_ROLE_ID)
 
     if role is None:
+        print(f"Rôle introuvable : {WOW_ROLE_ID}")
         return players
 
-    for member in guild.members:
+    for member in role.members:
         if member.bot:
             continue
 
@@ -36,8 +37,6 @@ def get_wow_players(guild: discord.Guild) -> list[str]:
 
             if not activity_name:
                 continue
-
-            activity_name = activity_name.strip()
 
             if "world of warcraft" in activity_name.lower():
                 players.append(
