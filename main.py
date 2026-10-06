@@ -17,9 +17,15 @@ bot = commands.Bot(
     help_command=None
 )
 
+WOW_ROLE_NAME = "Raider"
 
 def get_wow_players(guild: discord.Guild) -> list[str]:
     players = []
+    
+    role = discord.utils.get(guild.roles, name=WOW_ROLE_NAME)
+
+    if role is None:
+        return players
 
     for member in guild.members:
         if member.bot:
